@@ -93,7 +93,22 @@ module Koudoku
 
           # by default these methods support devise.
           if current_owner
-            redirect_to new_owner_subscription_path(current_owner, plan: params[:plan])
+            @plan = ::Plan.find(params[:plan])
+            if @plan.name.downcase == "free"
+              @owner = current_owner
+              @subscription = ::Subscription.new(plan_id: params[:plan])
+              @subscription.subscription_owner = @owner
+              
+              if @subscription.save
+                flash[:notice] = after_new_subscription_message
+                redirect_to after_new_subscription_path 
+              else
+                flash[:error] = 'There was a problem processing this transaction.'
+                render :new
+              end
+            else
+              redirect_to new_owner_subscription_path(current_owner, plan: params[:plan])
+            end
           else
             redirect_to_sign_up
           end
@@ -142,12 +157,17 @@ module Koudoku
     end
 
     def update
-      if @subscription.update_attributes(subscription_params)
-        flash[:notice] = "You've successfully updated your subscription."
-        redirect_to owner_subscription_path(@owner, @subscription)
+      if @subscription.last_four.nil? && @subscription.plan.name.downcase != "free"
+        flash[:notice] = "Please update card information to proceed"
+        redirect_to edit_owner_subscription_path(@owner, @subscription, update: 'card')
       else
-        flash[:error] = 'There was a problem processing this transaction.'
-        render :edit
+        if @subscription.update_attributes(subscription_params)
+          flash[:notice] = "You've successfully updated your subscription."
+          redirect_to owner_subscription_path(@owner, @subscription)
+        else
+          flash[:error] = 'There was a problem processing this transaction.'
+          render :edit
+        end
       end
     end
 
