@@ -157,7 +157,8 @@ module Koudoku
     end
 
     def update
-      if @subscription.last_four.nil? && @subscription.plan.name.downcase != "free"
+      @current_plan = ::Plan.find(params[:subscription][:plan_id])
+      if @subscription.last_four.nil? && @current_plan.name.downcase != "free"
         flash[:notice] = "Please update card information to proceed"
         redirect_to edit_owner_subscription_path(@owner, @subscription, update: 'card')
       else
